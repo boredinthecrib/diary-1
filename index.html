@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Diary App</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				max-width: 600px;
+				margin: auto;
+				padding: 20px;
+				background-color: #f4f4f4;
+				color: #333;
+			}
+			#login,
+			#diary {
+				background: white;
+				padding: 20px;
+				border-radius: 10px;
+				box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+				text-align: center;
+			}
+			input,
+			textarea {
+				width: 100%;
+				padding: 10px;
+				margin: 10px 0;
+				border: 1px solid #ddd;
+				border-radius: 5px;
+			}
+			button {
+				background: #28a745;
+				color: white;
+				padding: 10px 15px;
+				border: none;
+				border-radius: 5px;
+				cursor: pointer;
+				transition: background 0.3s;
+			}
+			button:hover {
+				background: #218838;
+			}
+			.entry {
+				background: #fff;
+				border-left: 5px solid #28a745;
+				padding: 10px;
+				margin: 10px 0;
+				border-radius: 5px;
+				box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
+				position: relative;
+			}
+			.delete-btn {
+				color: red;
+				cursor: pointer;
+				float: right;
+				font-weight: bold;
+			}
+			.share-btn {
+				color: blue;
+				cursor: pointer;
+				font-weight: bold;
+				margin-left: 10px;
+				position: relative;
+				display: inline-block;
+			}
+			.share-options {
+				display: none;
+				position: absolute;
+				background: white;
+				border: 1px solid #ddd;
+				padding: 5px;
+				border-radius: 5px;
+				box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
+				top: 25px;
+				left: 0;
+				z-index: 10;
+				white-space: nowrap;
+			}
+			.share-btn:hover .share-options {
+				display: flex;
+				gap: 10px;
+				padding: 5px;
+			}
+			.share-options a {
+				text-decoration: none;
+				font-size: 20px;
+				color: #333;
+				transition: color 0.3s;
+			}
+			.share-options a:hover {
+				color: #007bff;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="login">
+			<h2>Sign Up / Login</h2>
+			<input type="email" id="email" placeholder="Enter your email" />
+			<input type="text" id="name" placeholder="Enter your name" />
+			<input type="password" id="password" placeholder="Enter your password" />
+			<button onclick="registerOrLogin()">Submit</button>
+		</div>
+
+		<div id="diary" style="display: none">
+			<h2>Welcome, <span id="userDisplay"></span>!</h2>
+			<textarea id="entryText" placeholder="Write your entry..."></textarea>
+			<button onclick="addEntry()">Add Entry</button>
+			<h3>Your Entries</h3>
+			<div id="entries"></div>
+			<button onclick="logout()">Logout</button>
+		</div>
+
+		<script>
+			function registerOrLogin() {
+				const email = document.getElementById("email").value;
+				const name = document.getElementById("name").value;
+				const password = document.getElementById("password").value;
+
+				if (!email || !name || !password) {
+					alert("Please fill in all fields.");
+					return;
+				}
+
+				let users = JSON.parse(localStorage.getItem("users")) || {};
+
+				if (!users[email]) {
+					users[email] = { name, password };
+					localStorage.setItem("users", JSON.stringify(users));
+					alert("Account created successfully!");
+				} else if (users[email].password !== password) {
+					alert("Incorrect password!");
+					return;
+				}
+
+				localStorage.setItem("user", JSON.stringify({ email, name }));
+				showDiary();
+			}
+
+			function showDiary() {
+				const user = JSON.parse(localStorage.getItem("user"));
+				if (user) {
+					document.getElementById("userDisplay").textContent = user.name;
+					document.getElementById("login").style.display = "none";
+					document.getElementById("diary").style.display = "block";
+					loadEntries();
+				}
+			}
+
+			function addEntry() {
+				const user = JSON.parse(localStorage.getItem("user"));
+				if (!user) return;
+
+				const entryText = document.getElementById("entryText").value;
+				if (!entryText) {
+					alert("Please write something.");
+					return;
+				}
+
+				const entries =
+					JSON.parse(localStorage.getItem(`entries_${user.email}`)) || [];
+				entries.unshift({ text: entryText, date: new Date().toISOString() });
+				localStorage.setItem(`entries_${user.email}`, JSON.stringify(entries));
+				document.getElementById("entryText").value = "";
+				loadEntries();
+			}
+
+			function loadEntries() {
+				const user = JSON.parse(localStorage.getItem("user"));
+				if (!user) return;
+
+				const entries =
+					JSON.parse(localStorage.getItem(`entries_${user.email}`)) || [];
+				const entriesDiv = document.getElementById("entries");
+				entriesDiv.innerHTML = "";
+
+				entries.forEach((entry, index) => {
+					const encodedText = encodeURIComponent(entry.text);
+
+					const entryDiv = document.createElement("div");
+					entryDiv.classList.add("entry");
+					entryDiv.innerHTML = `
+                    <strong>${new Date(
+											entry.date
+										).toLocaleString()}</strong><br>${entry.text}<br>
+                    <span class='delete-btn' onclick='deleteEntry(${index})'>Delete</span>
+                    <span class='share-btn'>Share
+                        <div class='share-options'>
+                            <a href="https://twitter.com/intent/tweet?text=${encodedText}" target="_blank">
+                                <img src="./Img/twitter.png" alt="twitter" />
+                                </a>
+                            <a href="https://www.facebook.com/sharer/sharer.php?u=${encodedText}" target="_blank">
+                                  <img src="./Img/fb.png" alt="Facebook" /></a>
+                                 
+                            <a href="https://www.instagram.com/?url=${encodedText}" target="_blank">
+                                  <img src="./Img/insta.png" alt="insta" /></a>
+                        </div>
+                    </span>`;
+					entriesDiv.appendChild(entryDiv);
+				});
+			}
+
+			function deleteEntry(index) {
+				const user = JSON.parse(localStorage.getItem("user"));
+				if (!user) return;
+
+				let entries =
+					JSON.parse(localStorage.getItem(`entries_${user.email}`)) || [];
+				entries.splice(index, 1);
+				localStorage.setItem(`entries_${user.email}`, JSON.stringify(entries));
+				loadEntries();
+			}
+
+			function logout() {
+				localStorage.removeItem("user");
+				document.getElementById("login").style.display = "block";
+				document.getElementById("diary").style.display = "none";
+			}
+
+			document.addEventListener("DOMContentLoaded", showDiary);
+		</script>
+	</body>
+</html>
